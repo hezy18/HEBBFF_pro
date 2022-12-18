@@ -1,7 +1,7 @@
 import torch, os
 from copy import deepcopy
 from data import generate_recog_data
-from networks import HebbNetBatched, HebbNet
+from HEBBFF.networks import HebbNetBatched, HebbNet
 from plotting import plot_train_perf, plot_W, plot_recog_generalization, plot_recog_positive_rates, plot_multi_hist, clean_up_w, sort_w, shuffle_w, left_justify_w, plot_w1_row_col_sums 
 from net_utils import load_from_file
 import matplotlib.pyplot as plt

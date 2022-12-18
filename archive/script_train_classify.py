@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import TensorDataset
 
 from data import GenRecogClassifyData, generate_recog_data
-from networks import HebbNet
+from HEBBFF.networks import HebbNet
 from plotting import plot_train_perf
 
 

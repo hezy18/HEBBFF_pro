@@ -1,5 +1,5 @@
 import torch
-import networks as nets
+import HEBBFF.networks as nets
 from data import generate_recog_data, generate_recog_data_batch
 from plotting import plot_generalization, get_recog_positive_rates
 

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from data import prob_repeat_to_frac_novel, generate_recog_data
-from networks import DetHebb, DetHebbNoSplit
+from HEBBFF.networks import DetHebb, DetHebbNoSplit
 
 
 #%% Get generalization performance 

@@ -7,7 +7,7 @@ from torch import nn
 
 from net_utils import load_from_file
 import plotting
-import networks
+import HEBBFF.networks as networks
 from data import generate_recog_data, GenRecogClassifyData
 
 import seaborn as sns

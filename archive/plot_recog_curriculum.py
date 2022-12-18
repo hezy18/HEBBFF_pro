@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from data import  generate_recog_data, recog_chance
 from plotting import plot_train_perf, plot_W, plot_B, plot_recog_generalization
-from networks import HebbNet
+from HEBBFF.networks import HebbNet
 from net_utils import binary_classifier_accuracy, load_from_file
 
 #%%

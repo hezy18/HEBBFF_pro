@@ -703,9 +703,10 @@ class nnLSTM(VanillaRNN):
     
     
     def forward(self, x):
-        if x.shape
-        self.h, self.c = self.lstm(x.unsqueeze(0), (self.h, self.c))
-        self.h, self.c = self.lstm(x, (self.h, self.c))
+        if len(x.shape)==2:
+            self.h, self.c = self.lstm(x, (self.h, self.c))
+        else:
+            self.h, self.c = self.lstm(x.unsqueeze(0), (self.h, self.c))
         y = self.fOut( F.linear(self.h, self.Wy, self.by) ) 
         return y
                   

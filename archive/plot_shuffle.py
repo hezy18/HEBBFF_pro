@@ -8,7 +8,7 @@ import torch
 
 from data import  generate_recog_data
 from plotting import plot_train_perf, plot_W, plot_B, plot_recog_generalization, maxabs
-from networks import HebbNet
+from HEBBFF.networks import HebbNet
 from net_utils import binary_classifier_accuracy, load_from_file
 from dt_utils import subplots_square
 #%%

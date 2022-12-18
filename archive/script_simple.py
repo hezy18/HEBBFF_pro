@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 #My imports
 from data import generate_recog_data_batch
-from networks import HebbNet
+from HEBBFF.networks import HebbNet
 from plotting import plot_train_perf
 from net_utils import binary_classifier_accuracy
 

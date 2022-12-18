@@ -7,7 +7,7 @@ import torch
 
 from data import generate_aug_recog_data_batch, generate_recog_data_batch, recog_chance
 from plotting import plot_train_perf
-from networks import HebbAugRecog
+from HEBBFF.networks import HebbAugRecog
 
 #%% Compare batchsizes 
 #T=500

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 from net_utils import load_from_file
-from networks import HebbRecogDecoupledManual, HebbRecogDecoupledManualSequential
+from HEBBFF.networks import HebbRecogDecoupledManual, HebbRecogDecoupledManualSequential
 from data import generate_recog_data, recog_chance
 from plotting import plot_recog_generalization
 from bogacz import BogaczAntiHebb
