@@ -1,5 +1,5 @@
 import torch
-import HEBBFF.networks as nets
+import networks as nets
 from data import generate_recog_data, generate_recog_data_batch
 from plotting import plot_generalization, get_recog_positive_rates
 
@@ -52,4 +52,4 @@ if save:
 #plot generalization
 gen_data = lambda R: generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
 testR, testAcc, truePosRate, falsePosRate = get_recog_positive_rates(net, gen_data)
-plot_generalization(testR, testAcc, truePosRate, falsePosRate)
+ax = plot_generalization(testR, testAcc, truePosRate, falsePosRate)
