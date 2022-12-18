@@ -4,11 +4,11 @@ from data import generate_recog_data, generate_recog_data_batch
 from plotting import plot_generalization, get_recog_positive_rates
 
 #choose parameters
-netType = 'HebbNet' # HebbFF or LSTM
+netType = 'nnLSTM' # HebbFF or LSTM
 d = 100             # input dim
 N = 100             # hidden dim
-force = None        # ensure either Hebbian or anti-Hebbian plasticity
-trainMode = 'dat'   # train on single dataset or infinite data
+force = 'Anti'        # ensure either Hebbian or anti-Hebbian plasticity
+trainMode = 'inf'   # train on single dataset or infinite data
 R = 3               # delay interval
 T = 500             # length of dataset
 save = False
@@ -34,7 +34,7 @@ if trainMode == 'dat':
     trainData = generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
     validBatch = generate_recog_data(T=T, d=d, R=R, P=0.5, multiRep=False).tensors
     net.fit('dataset', epochs=float('inf'), trainData=trainData,
-            validBatch=validBatch, earlyStop=False)
+            validBatch=validBatch, earlyStop=True)
 elif trainMode == 'inf':
     gen_data = lambda: generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
     net.fit('infinite', gen_data)
