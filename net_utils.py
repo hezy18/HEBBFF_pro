@@ -82,7 +82,9 @@ class NetworkBase(nn.Module):
                 return True
             if validStopThres is not None and self.hist['valid_acc'][-1]>validStopThres:
                 return True
-            if earlyStop and sum(self.hist['train_acc'][-5:]) >= 4.99: #not a proper early-stop criterion but useful for infinite data regime
+
+            if earlyStop and sum(self.hist['train_acc'][-5:]) >= 4.9: #not a proper early-stop criterion but useful for infinite data regime
+
                 return True
         return False
                        

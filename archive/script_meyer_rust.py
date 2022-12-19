@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import torch
 
 import plotting
-import HEBBFF.networks as networks
+
+import networks
 from net_utils import load_from_file
 
 

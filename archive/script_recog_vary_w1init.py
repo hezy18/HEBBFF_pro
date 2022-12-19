@@ -5,7 +5,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from net_utils import random_weight_init, load_from_file
-from HEBBFF.networks import HebbNet
+
+from networks import HebbNet
 
 #haba_loop.py args
 #script = 'script_recog_vary_w1init.py'

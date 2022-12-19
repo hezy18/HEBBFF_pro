@@ -5,7 +5,8 @@ import torch.nn as nn
 
 from data import generate_recog_data_batch, GenRecogClassifyData
 from net_utils import load_from_file
-import HEBBFF.networks as networks
+
+import networks
 
 ## Parse command line args
 parser = argparse.ArgumentParser()

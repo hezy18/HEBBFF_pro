@@ -6,7 +6,8 @@ import torch.nn.functional as F
 
 #My imports
 from data import generate_recog_data_batch, generate_recog_data
-from HEBBFF.networks import HebbNet
+
+from networks import HebbNet
 from plotting import plot_train_perf, plot_recog_generalization, plot_recog_positive_rates, change_reset_fn_to_burned_in
 from net_utils import binary_classifier_accuracy, load_from_file
 

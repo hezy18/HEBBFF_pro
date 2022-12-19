@@ -1,6 +1,7 @@
 import argparse, math
 
-from HEBBFF.networks import HebbNet
+
+from networks import HebbNet
 from data import generate_recog_data_batch
 from net_utils import train_curriculum_simple
 

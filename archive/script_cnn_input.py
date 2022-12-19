@@ -9,7 +9,8 @@ from torch.utils.data import TensorDataset
 from data import prob_repeat_to_frac_novel, GenRecogClassifyData, generate_recog_data
 from plotting import plot_recog_generalization, plot_recog_positive_rates
 from net_utils import load_from_file
-from HEBBFF.networks import DetHebb
+
+from networks import DetHebb
 
 #%%
 def forward_remove_readout(self, x): 

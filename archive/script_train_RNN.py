@@ -1,5 +1,6 @@
 from data import generate_recog_data_batch, generate_recog_data
-from HEBBFF.networks import VanillaRNN
+
+from networks import VanillaRNN
 from plotting import plot_recog_generalization, plot_train_perf
 
 #%%

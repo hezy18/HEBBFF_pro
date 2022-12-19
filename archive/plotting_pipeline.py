@@ -7,7 +7,8 @@ from torch.utils.data import TensorDataset
 
 from data import generate_recog_data, generate_recog_data_batch, GenRecogClassifyData
 from net_utils import load_from_file
-import plotting, HEBBFF.networks as networks
+
+import plotting, networks
 
 
 def choose_gen_data(net, chooseT=False, inputDataFile=None, **kwargs):

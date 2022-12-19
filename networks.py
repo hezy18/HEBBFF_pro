@@ -114,7 +114,8 @@ class HebbNet(StatefulBase):
             if self.groundTruthPlast and isFam:
                 self.A = self.lam*self.A
             else:
-                self.A = self.lam*self.A + self.eta*torch.ger(post,pre)
+
+                self.A = self.lam*self.A + self.eta* post @ pre
 
     
     def forward(self, x, isFam=False, debug=False):
@@ -122,8 +123,9 @@ class HebbNet(StatefulBase):
         Don't call twice in a row unless you want to update self.A twice!"""
                 
         w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
-            
+           
         a1 = torch.addmv(self.b1, w1+self.A, x) #hidden layer activation
+
         h = self.f( a1 ) 
         self.update_hebb(x,h, isFam=isFam)        
        
@@ -131,11 +133,12 @@ class HebbNet(StatefulBase):
             w2 = self.w2.expand(1,h.shape[0])
         else:
             w2 = self.w2
-        a2 = torch.addmv(self.b2, w2, h) #output layer activation
+
+        a2 = (w2 @ h) + self.b2
         y = self.fOut( a2 ) 
                            
         if debug:
-            return a1, h, a2, y 
+            return a1.squeeze(), h.squeeze(), a2.squeeze(), y.squeeze() 
         return y
      
      
@@ -164,13 +167,14 @@ class HebbNet(StatefulBase):
               'a2' : torch.empty_like(batch[1]),
               'out' : torch.empty_like(batch[1])}
         for t,(x,y) in enumerate(zip(*batch)):
-            # db['Ax'][t] = torch.mv(self.A, x) 
-            db['Ax'][t] = self.A@x.T
+
+            db['Ax'][t] = (self.A @ x.T).squeeze()
             try: isFam = bool(y)
             except: isFam = bool(y[0])
             db['a1'][t], db['h'][t], db['a2'][t], db['out'][t] = self(x, isFam=isFam, debug=True)      
             w1 = self.g1*self.w1 if hasattr(self, 'g1') and not torch.isnan(self.g1) else self.w1
-            db['Wxb'][t] = torch.addmv(self.b1, w1, x) 
+
+            db['Wxb'][t] = self.b1 + (w1 @ x.T).squeeze()
         db['acc'] = self.accuracy(batch).item()  
                         
         if recogOnly and len(db['out'].shape)>1:

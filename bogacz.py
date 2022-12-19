@@ -141,6 +141,7 @@ for netType in ['hebbff', 'bogacz']:
                 elif netType == 'hebbff':
                     # if net is None:
                     net = load_from_file('antiHebb/HebbNet[100,100,1]_train=inf6_forceAnti.pkl')
+
                     out = net.evaluate(trainData.tensors).flatten()
                     outBool = out > 0.5
                     _acc = (outBool == target).float().mean().item()

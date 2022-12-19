@@ -8,10 +8,10 @@ netType = 'nnLSTM' # HebbFF or LSTM
 d = 100             # input dim
 N = 100             # hidden dim
 force = 'Anti'        # ensure either Hebbian or anti-Hebbian plasticity
-trainMode = 'dat'   # train on single dataset or infinite data
+trainMode = 'inf'   # train on single dataset or infinite data
 R = 3               # delay interval
 T = 500             # length of dataset
-save = True
+save = False
 
 #initialize net
 if netType == 'nnLSTM':

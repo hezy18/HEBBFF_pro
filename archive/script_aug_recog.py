@@ -3,7 +3,8 @@ import numpy as np
 import torch
 import joblib
 
-from HEBBFF.networks import HebbAugRecog
+
+from networks import HebbAugRecog
 from data import generate_aug_recog_data_batch
 
 #%%
