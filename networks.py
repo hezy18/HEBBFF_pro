@@ -689,8 +689,11 @@ class nnLSTM(VanillaRNN):
         
         Nx,Nh,Ny = init #TODO: allow manual initialization       
         self.lstm = nn.LSTMCell(Nx,Nh)
+        self.heb = MyHebbNet(init)
+        self.heb.forceAnti = torch.tensor(True)
+        self.heb.init_hebb(eta=self.heb.eta.item(), lam=self.heb.lam.item())
         
-        Wy,by = random_weight_init([Nh,Ny], bias=True)           
+        Wy,by = random_weight_init([Nh*2,Ny], bias=True)           
         self.Wy = nn.Parameter(torch.tensor(Wy[0],  dtype=torch.float))
         self.by = nn.Parameter(torch.tensor(by[0],  dtype=torch.float))
         
@@ -700,20 +703,146 @@ class nnLSTM(VanillaRNN):
         
         self.reset_state()
 
+    def evaluate(self, batch):
+        self.heb.reset_state()
+        self.reset_state()
+        out = torch.empty_like(batch[1]) 
+        for t,(x,y) in enumerate(zip(*batch)): 
+            out[t] = self(x, isFam=bool(y)) 
+        return out
         
     def reset_state(self):
         self.h = torch.zeros(1,self.lstm.hidden_size)
         self.c = torch.zeros(1,self.lstm.hidden_size)
     
-    
-    def forward(self, x):
-        if len(x.shape)==2:
-            self.h, self.c = self.lstm(x, (self.h, self.c))
-        else:
-            self.h, self.c = self.lstm(x.unsqueeze(0), (self.h, self.c))
-        y = self.fOut( F.linear(self.h, self.Wy, self.by) ) 
+    def forward(self, x, isFam=False):
+        if len(x.shape) == 1:
+            x = x.unsqueeze(0)
+        self.h, self.c = self.lstm(x, (self.h, self.c))
+        self.h1 = self.heb(x, isFam)
+        # y = self.fOut( F.linear(self.h+self.h1, self.Wy, self.by) ) 
+        y = self.fOut( F.linear(torch.cat([self.h, self.h1.unsqueeze(0)], -1), self.Wy, self.by) ) 
         return y
-                  
+
+            
+class MyHebbNet(StatefulBase):     
+    def __init__(self, init, f=torch.sigmoid, fOut=torch.sigmoid, **hebbArgs):        
+        super().__init__()        
+        
+        if all([type(x)==int for x in init]):
+            Nx,Nh,Ny = init
+            W,b = random_weight_init([Nx,Nh,Ny], bias=True)
+        else:
+            W,b = init
+#            check_dims(W,b)
+            
+        self.w1 = nn.Parameter(torch.tensor(W[0], dtype=torch.float))
+        self.g1 = nn.Parameter(torch.tensor(float('nan')), requires_grad=False) #Can add this to network post-init. Then, freeze W1 and only train its gain
+        self.b1 = nn.Parameter(torch.tensor(b[0], dtype=torch.float))
+        self.w2 = nn.Parameter(torch.tensor(W[1], dtype=torch.float))
+        self.b2 = nn.Parameter(torch.tensor(b[1], dtype=torch.float))
+        
+        self.loss_fn = F.binary_cross_entropy 
+        self.acc_fn = binary_classifier_accuracy
+        self.f = f
+        self.fOut = fOut    
+                             
+        self.register_buffer('A', None) 
+        try:          
+            self.reset_state()
+        except AttributeError as e:
+            print('Warning: {}. Not running reset_state() in HebbFF.__init__'.format(e))
+            
+        self.register_buffer('plastic', torch.tensor(True))        
+        self.register_buffer('forceAnti', torch.tensor(False))
+        self.register_buffer('forceHebb', torch.tensor(False))
+        self.register_buffer('reparamLam', torch.tensor(False))
+        self.register_buffer('reparamLamTau', torch.tensor(False))
+        self.register_buffer('groundTruthPlast', torch.tensor(False))
+        
+        self.init_hebb(**hebbArgs) #parameters of Hebbian rule
+
+        
+    def load(self, filename):
+        super(HebbNet, self).load(filename)
+        self.update_hebb(torch.tensor([0.]),torch.tensor([0.])) #to get self.eta right if forceHebb/forceAnti used        
+    
+    
+    def reset_state(self):
+        self.A = torch.zeros_like(self.w1)                
+  
+    
+    def init_hebb(self, eta=None, lam=0.99):
+        if eta is None:
+            eta = -5./self.w1.shape[1] #eta*d = -5
+            
+        """ A(t+1) = lam*A(t) + eta*h(t)x(t)^T """
+        if self.reparamLam:
+            self._lam = nn.Parameter(torch.tensor(np.log(lam/(1.-lam))))
+            if self.lam: 
+                del self.lam
+            self.lam = torch.sigmoid(self._lam)
+        elif self.reparamLamTau:
+            self._lam = nn.Parameter(torch.tensor(1./(1-lam)))
+            if self.lam: 
+                del self.lam
+            self.lam = 1. - 1/self._lam
+        else:
+            self._lam = nn.Parameter(torch.tensor(lam)) #Hebbian decay
+            self.lam = self._lam.data
+            
+        #Hebbian learning rate 
+        if self.forceAnti:
+            if self.eta: 
+                del self.eta
+            self._eta = nn.Parameter(torch.log(torch.abs(torch.tensor(eta)))) #eta = exp(_eta)
+            self.eta = -torch.exp(self._eta)
+        elif self.forceHebb: 
+            if self.eta: 
+                del self.eta
+            self._eta = nn.Parameter(torch.log(torch.abs(torch.tensor(eta)))) #eta = exp(_eta)
+            self.eta = torch.exp(self._eta)
+        else:
+            self._eta = nn.Parameter(torch.tensor(eta))    
+            self.eta = self._eta.data    
+    
+    
+    def update_hebb(self, pre, post, isFam=False):
+        if self.reparamLam:
+            self.lam = torch.sigmoid(self._lam)
+        elif self.reparamLamTau:
+            self.lam = 1. - 1/self._lam
+        else:
+            self._lam.data = torch.clamp(self._lam.data, min=0., max=1.) #if lam>1, get exponential explosion
+            self.lam = self._lam 
+        
+        if self.forceAnti:
+            self.eta = -torch.exp(self._eta)
+        elif self.forceHebb: 
+            self.eta = torch.exp(self._eta)
+        else:
+            self.eta = self._eta
+            
+        if self.plastic:
+            if self.groundTruthPlast and isFam:
+                self.A = self.lam*self.A
+            else:
+
+                self.A = self.lam*self.A + self.eta* torch.outer(pre.squeeze(), post.squeeze())
+
+    
+    def forward(self, x, isFam=False, debug=False):
+        """This modifies the internal state of the model (self.A). 
+        Don't call twice in a row unless you want to update self.A twice!"""
+                
+        w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
+           
+        a1 = torch.addmv(self.b1, w1+self.A, x.squeeze()) #hidden layer activation
+
+        h = self.f( a1 ) 
+        self.update_hebb(x,h, isFam=isFam)        
+
+        return h
         
         
         

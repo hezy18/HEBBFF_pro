@@ -57,6 +57,7 @@ def plot_generalization(testR, testAcc, truePosRate, falsePosRate, chance=None, 
     ax[1].plot(testR, falsePosRate, ls=ls, color=color, **kwargs)
     ax[1].set_ylabel('Probability')
     ax[1].set_xlabel('$R_{test}$')
+    plt.savefig('HebbnnLSTM.png')
 
     return ax
 

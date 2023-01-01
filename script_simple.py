@@ -2,7 +2,7 @@ import torch
 import networks as nets
 from data import generate_recog_data, generate_recog_data_batch
 from plotting import plot_generalization, get_recog_positive_rates
-
+# torch.autograd.set_detect_anomaly(True)
 #choose parameters
 netType = 'nnLSTM' # HebbFF or LSTM
 d = 100             # input dim
@@ -34,7 +34,7 @@ if trainMode == 'dat':
     trainData = generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
     validBatch = generate_recog_data(T=T, d=d, R=R, P=0.5, multiRep=False).tensors
     net.fit('dataset', epochs=float('inf'), trainData=trainData,
-            validBatch=validBatch, earlyStop=True)
+            validBatch=validBatch, earlyStop=False)
 elif trainMode == 'inf':
     gen_data = lambda: generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
     net.fit('infinite', gen_data)
