@@ -693,7 +693,7 @@ class nnLSTM(VanillaRNN):
         self.heb.forceAnti = torch.tensor(True)
         self.heb.init_hebb(eta=self.heb.eta.item(), lam=self.heb.lam.item())
         
-        Wy,by = random_weight_init([Nh*2,Ny], bias=True)           
+        Wy,by = random_weight_init([Nh,Ny], bias=True)           
         self.Wy = nn.Parameter(torch.tensor(Wy[0],  dtype=torch.float))
         self.by = nn.Parameter(torch.tensor(by[0],  dtype=torch.float))
         
@@ -720,8 +720,8 @@ class nnLSTM(VanillaRNN):
             x = x.unsqueeze(0)
         self.h, self.c = self.lstm(x, (self.h, self.c))
         self.h1 = self.heb(x, isFam)
-        # y = self.fOut( F.linear(self.h+self.h1, self.Wy, self.by) ) 
-        y = self.fOut( F.linear(torch.cat([self.h, self.h1.unsqueeze(0)], -1), self.Wy, self.by) ) 
+        y = self.fOut( F.linear(self.h+self.h1, self.Wy, self.by) ) 
+        # y = self.fOut( F.linear(torch.cat([self.h, self.h1.unsqueeze(0)], -1), self.Wy, self.by) ) 
         return y
 
             
