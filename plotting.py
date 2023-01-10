@@ -505,8 +505,8 @@ def error_breakdown(out, y, th=0.5):
     falsePos = (1-y)[posOutIdx].sum().item()
     truePos = y[posOutIdx].sum().item()
 
-    falsePosRate = falsePos/totNeg
-    truePosRate = truePos/totPos
+    falsePosRate = falsePos/(totNeg+1e-6)
+    truePosRate = truePos/(totPos+1e-6)
 
     return falsePosRate, truePosRate
 

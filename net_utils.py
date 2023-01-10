@@ -80,7 +80,7 @@ class NetworkBase(nn.Module):
             
             if earlyStopValid and len(self.hist['valid_loss'])>1 and self.hist['valid_loss'][-1] > self.hist['valid_loss'][-2]:
                 return True
-            if validStopThres is not None and self.hist['valid_acc'][-1]>validStopThres:
+            if validStopThres is not None and self.hist['valid_acc'][-1] > validStopThres:
                 return True
 
             if earlyStop and sum(self.hist['train_acc'][-5:]) >= float(os.environ['EARLY_STOP']): #not a proper early-stop criterion but useful for infinite data regime
@@ -372,16 +372,15 @@ def train_multiR_curriculum(net, gen_data, Rlo=1, Rhi=2, spacing=range, batchSiz
     latestIncrementIter = net.hist['iter']
         
     converged = False
-    itersSinceIncrement = 0
-    while itersSinceIncrement < itersToQuit:
+    while itersSinceIncrement < itersToQuit and max(Rlist) < 500:
         if hasattr(net, 'writer'):
             net.writer.add_scalar('info/Rlo', Rlist[0], net.hist['iter'])
             net.writer.add_scalar('info/Rhi', Rlist[-1], net.hist['iter'])
-        if converged:
+        if converged  and net.hist['iter'] % 10 == 0:
             Rlo, Rhi = increment(Rlo, Rhi)
             Rlist = spacing(Rlo, Rhi)
             latestIncrementIter = net.hist['iter']
-            print('acc(Rchance)>0.55. Setting Rlist=[{}...{}] \n'.format(Rlist[0], Rlist[-1]))
+            print('acc(Rchance)>{}. Setting Rlist=[{}...{}] \n'.format(float(os.environ['EARLY_STOP'])/5, Rlist[0], Rlist[-1]))
             net.hist['increment_R'].append( (net.hist['iter'], Rlist[0], Rlist[-1]) )    
             net.autosave(force=True)  
         itersSinceIncrement = net.hist['iter'] - latestIncrementIter    
@@ -390,7 +389,7 @@ def train_multiR_curriculum(net, gen_data, Rlo=1, Rhi=2, spacing=range, batchSiz
         
         #TODO: this is dumb, I'm generating 1000x more data than I'm using for validation
         validBatch = gen_data([Rlist[-1]])[:,0,:] if batchSize is None else gen_data(Rlist)[:,:batchSize,:] 
-        converged = net._train_epoch(trainCache, validBatch, batchSize=batchSize, earlyStop=False, validStopThres=0.55)
+        converged = net._train_epoch(trainCache, validBatch, batchSize=batchSize, earlyStop=False, validStopThres=float(os.environ['EARLY_STOP'])/5)
                
 
 #%%############

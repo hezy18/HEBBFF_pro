@@ -123,8 +123,10 @@ class HebbNet(StatefulBase):
         Don't call twice in a row unless you want to update self.A twice!"""
                 
         w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
-           
-        a1 = torch.addmv(self.b1, w1+self.A, x) #hidden layer activation
+        if len(x.shape) < 2:
+            x = x.unsqueeze(0)
+        a1 = (w1 + self.A) @ x.T + self.b1.unsqueeze(-1)
+        # a1 = torch.addmv(self.b1, w1+self.A, x) #hidden layer activation
 
         h = self.f( a1 ) 
         self.update_hebb(x,h, isFam=isFam)        
@@ -719,9 +721,9 @@ class nnLSTM(VanillaRNN):
         if len(x.shape) == 1:
             x = x.unsqueeze(0)
         self.h, self.c = self.lstm(x, (self.h, self.c))
-        self.h1 = self.heb(x, isFam)
+        self.h1 = self.heb(x, isFam).T
         y = self.fOut( F.linear(self.h+self.h1, self.Wy, self.by) ) 
-        # y = self.fOut( F.linear(torch.cat([self.h, self.h1.unsqueeze(0)], -1), self.Wy, self.by) ) 
+        # y = self.fOut( F.linear(torch.cat([self.h, self.h1], -1), self.Wy, self.by) ) 
         return y
 
             
@@ -828,7 +830,7 @@ class MyHebbNet(StatefulBase):
                 self.A = self.lam*self.A
             else:
 
-                self.A = self.lam*self.A + self.eta* torch.outer(pre.squeeze(), post.squeeze())
+                self.A = self.lam*self.A + self.eta* post @ pre
 
     
     def forward(self, x, isFam=False, debug=False):
@@ -837,15 +839,91 @@ class MyHebbNet(StatefulBase):
                 
         w1 = self.g1*self.w1 if not torch.isnan(self.g1) else self.w1
            
-        a1 = torch.addmv(self.b1, w1+self.A, x.squeeze()) #hidden layer activation
+        if len(x.shape) < 2:
+            x = x.unsqueeze(0)
+        a1 = (w1 + self.A) @ x.T + self.b1.unsqueeze(-1)
+        # a1 = torch.addmv(self.b1, w1+self.A, x.squeeze()) #hidden layer activation
 
         h = self.f( a1 ) 
         self.update_hebb(x,h, isFam=isFam)        
 
         return h
         
+class rawLSTM(VanillaRNN): 
+    """Should be identical to implementation above, but uses PyTorch internals for LSTM layer instead"""
+    def __init__(self, init, f=None, fOut=torch.sigmoid): #f is ignored. Included to have same signature as VanillaRNN
+        super(VanillaRNN,self).__init__()
         
+        Nx,Nh,Ny = init #TODO: allow manual initialization       
+        self.lstm = nn.LSTMCell(Nx,Nh)
         
+        Wy,by = random_weight_init([Nh,Ny], bias=True)           
+        self.Wy = nn.Parameter(torch.tensor(Wy[0],  dtype=torch.float))
+        self.by = nn.Parameter(torch.tensor(by[0],  dtype=torch.float))
         
+        self.loss_fn = F.binary_cross_entropy
+        self.acc_fn = binary_classifier_accuracy 
+        self.fOut = fOut
+        
+        self.reset_state()
+
+        
+    def reset_state(self):
+        self.h = torch.zeros(1,self.lstm.hidden_size)
+        self.c = torch.zeros(1,self.lstm.hidden_size)
+    
+    
+    def forward(self, x):
+        if len(x.shape)==2:
+            self.h, self.c = self.lstm(x, (self.h, self.c))
+        else:
+            self.h, self.c = self.lstm(x.unsqueeze(0), (self.h, self.c))
+        y = self.fOut( F.linear(self.h, self.Wy, self.by) ) 
+        return y
+        
+class DoubleHebb(StatefulBase):
+    def __init__(self, init, f=torch.sigmoid, fOut=torch.sigmoid, **hebbArgs):        
+        super().__init__()        
+        Nx,Nh,Ny = init #TODO: allow manual initialization       
+        self.heb1 = MyHebbNet(init, f=f, fOut=fOut, **hebbArgs)
+        self.heb2 = MyHebbNet(init, f=f, fOut=fOut, **hebbArgs)
+        
+        self.heb1.forceAnti = torch.tensor(True)
+        self.heb1.init_hebb(eta=self.heb1.eta.item(), lam=self.heb1.lam.item())
+        self.heb2.forceAnti = torch.tensor(True)
+        self.heb2.init_hebb(eta=self.heb2.eta.item(), lam=self.heb2.lam.item())
+        
+        Wy,by = random_weight_init([Nh,Ny], bias=True)           
+        self.Wy = nn.Parameter(torch.tensor(Wy[0],  dtype=torch.float))
+        self.by = nn.Parameter(torch.tensor(by[0],  dtype=torch.float))
+        
+        self.loss_fn = F.binary_cross_entropy
+        self.acc_fn = binary_classifier_accuracy 
+        self.fOut = fOut
+        
+        self.reset_state()
+
+    def init_hebb(self, eta=None, lam=0.99):
+        self.heb1.init_hebb(eta=eta, lam=lam)
+        self.heb2.init_hebb(eta=eta, lam=lam)
+
+    def evaluate(self, batch):
+        self.reset_state()
+        out = torch.empty_like(batch[1]) 
+        for t,(x,y) in enumerate(zip(*batch)): 
+            out[t] = self(x, isFam=bool(y)) 
+        return out
+        
+    def reset_state(self):
+        self.heb1.reset_state()
+        self.heb2.reset_state()
+    
+    def forward(self, x, isFam=False):
+        if len(x.shape) == 1:
+            x = x.unsqueeze(0)
+        self.h1 = self.heb1(x, isFam).T
+        self.h2 = self.heb2(x, isFam).T
+        y = self.fOut( F.linear(self.h1+self.h2, self.Wy, self.by) ) 
+        return y
         
         
